@@ -45,11 +45,19 @@
 #define NGX_HTTP_VHOST_TRAFFIC_STATUS_DEFAULT_AVG_PERIOD   60
 #define NGX_HTTP_VHOST_TRAFFIC_STATUS_DEFAULT_DUMP_PERIOD  60
 
+/*
+ * This is nuts, but we have a few services returning a 509 when a HTTP
+ * request is rate limited, instead of returning a 429.
+ *
+ * Changing this will require some time, so we are explicitly considering
+ * 509 as a 4xx status code.
+*/
 #define ngx_http_vhost_traffic_status_add_rc(s, n) {                           \
     if(s < 200) {n->stat_1xx_counter++;}                                       \
     else if(s < 300) {n->stat_2xx_counter++;}                                  \
     else if(s < 400) {n->stat_3xx_counter++;}                                  \
     else if(s < 500) {n->stat_4xx_counter++;}                                  \
+    else if(s == 509) {n->stat_4xx_counter++;}                                 \
     else {n->stat_5xx_counter++;}                                              \
 }
 
