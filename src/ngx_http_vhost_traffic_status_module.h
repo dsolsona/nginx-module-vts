@@ -46,17 +46,26 @@
 #define NGX_HTTP_VHOST_TRAFFIC_STATUS_DEFAULT_DUMP_PERIOD  60
 
 /*
- * This is nuts, but we have a few services returning a 509 when a HTTP
- * request is rate limited, instead of returning a 429.
+ * To provide some context around the special treatment for 503/509
  *
- * Changing this will require some time, so we are explicitly considering
- * 509 as a 4xx status code.
+ * We have a legacy API endpoint returning 509 when the rate limit kicks in,
+ * we still have a few customers using this endpoints and any change here
+ * could break their integrations so for now we will treat them as 429 hence
+ * the increase in the 4xx counter.
+ *
+ * When a store is suspended or cancelled we return a 503 error, we don't have
+ * any other service that could return this status code so we don't want to
+ * treat them as errors per se, so we just ignore them.
+ *
+ * Both of these are not ideal solutions and we are trying to change them, but
+ * there are some wide implication and side effects that need to be considered
 */
 #define ngx_http_vhost_traffic_status_add_rc(s, n) {                           \
     if(s < 200) {n->stat_1xx_counter++;}                                       \
     else if(s < 300) {n->stat_2xx_counter++;}                                  \
     else if(s < 400) {n->stat_3xx_counter++;}                                  \
     else if(s < 500) {n->stat_4xx_counter++;}                                  \
+    else if(s == 503) {break;}                                                 \
     else if(s == 509) {n->stat_4xx_counter++;}                                 \
     else {n->stat_5xx_counter++;}                                              \
 }
